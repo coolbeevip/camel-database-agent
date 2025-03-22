@@ -1,0 +1,10 @@
+.env
+.idea
+__pycache__
+.DS_Store
+.mypy_cache
+.mypy_cache_*
+.venv
+
+spider2_lite/database/local_sqlite
+spider2_lite/workspace

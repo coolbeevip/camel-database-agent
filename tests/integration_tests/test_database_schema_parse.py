@@ -1,0 +1,46 @@
+import os
+from unittest import TestCase
+
+from camel.models import ModelFactory
+from camel.types import ModelPlatformType, ModelType
+from dotenv import load_dotenv
+
+from camel_database_agent.database.database_manager import DatabaseManager
+from camel_database_agent.database.database_schema_parse import (
+    DatabaseSchemaParse,
+)
+
+load_dotenv("../../.env")  # isort:skip
+
+
+class TestDatabaseSchemaParse(TestCase):
+    parse: DatabaseSchemaParse
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        model = ModelFactory.create(
+            model_platform=ModelPlatformType.DEFAULT,
+            model_type=ModelType.DEFAULT,
+        )
+        cls.parse = DatabaseSchemaParse(
+            database_manager=DatabaseManager(db_url="sqlite:///example.db"),
+            model=model,
+        )
+
+    def test_parse_ddl_record(self) -> None:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(current_dir, "ddl.sql"), "r") as f:
+            ddl_records = self.parse.parse_ddl_record(f.read())
+            assert len(ddl_records) == 6
+
+    def test_parse_dml_record(self) -> None:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(current_dir, "data.sql"), "r") as f:
+            dml_records = self.parse.parse_dml_record(f.read())
+            assert len(dml_records) == 6
+
+    def test_parse_query_record(self) -> None:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(current_dir, "query.md"), "r") as f:
+            query_records = self.parse.parse_query_record(f.read())
+            assert len(query_records) == 3

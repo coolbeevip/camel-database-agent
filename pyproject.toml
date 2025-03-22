@@ -1,0 +1,106 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "camel-database-agent"
+version = "0.1.0"
+description = "An integration package connecting Database and Camel"
+authors = [{ name = "Lei Zhang" }]
+requires-python = ">=3.10,<3.13"
+readme = "README.md"
+license = "Apache-2.0"
+dependencies = [
+    "camel-ai[all]>=0.2.36",
+    "tabulate>=0.9",
+    "colorama>=0.4",
+    "dotenv",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7,<8",
+    "mock>=5,<6",
+    "pytest-asyncio>=0.23.0,<0.24",
+    "testcontainers>=4.9"
+]
+dev=[
+    "ruff>=0.7,<0.8",
+    "mypy>=1.5.1,<2",
+    "pre-commit>=3,<4",
+    "types-tabulate>=0.9",
+    "pandas-stubs>=2.2",
+    "uv==0.6.5",
+]
+
+[project.urls]
+Repository = "https://github.com/coolbeevip/camel-database-agent"
+
+[tool.uv]
+default-groups = [
+    "dev",
+]
+
+[tool.hatch.build.targets.sdist]
+include = ["camel_database_agent"]
+
+[tool.hatch.build.targets.wheel]
+include = ["camel_database_agent"]
+
+[tool.ruff]
+line-length = 99
+fix = true
+target-version = "py39"
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+extend-select = [
+    "I", # isort
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "PGH", # pygrep-hooks
+    "RUF", # ruff
+    "E",
+]
+ignore = [
+    "B028", # Warning without stacklevel
+    "B904", # use 'raise ... from err'
+    "B905", # use explicit 'strict=' parameter with 'zip()'
+    "N818", #  Exception name should be named with an Error suffix
+    "C416", # I think comprehension is more clear https://docs.astral.sh/ruff/rules/unnecessary-comprehension/
+    "C408", # we have used lots of dict(...) instead of literal
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["camel_database_agent"]
+
+[tool.ruff.lint.per-file-ignores]
+"camel_database_agent/database_prompt.py" = ["E501"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = ["--strict-markers"]
+
+[tool.coverage.report]
+include_namespace_packages = true
+
+[tool.mypy]
+exclude = [
+    '\.venv/.*',  # exclude .venv directory
+    'site-packages/.*',  # exclude site-packages
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "camel.*",
+    "colorama",
+    "pandas",
+    "qdrant_client.*",
+    "tabulate"
+]
+ignore_missing_imports = true
