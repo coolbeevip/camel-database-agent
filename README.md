@@ -64,7 +64,7 @@ python camel_database_agent/cli.py \
 
 ![](docs/screenshot-school-scheduling-database.png)
 
-#### Demo Video
+## Demo Video
 
 [![CAMEL DatabaseAgent Demo](docs/demo_video.jpg)](https://youtu.be/Fl065DB8Wqo "Watch the CAMEL DatabaseAgent Demo")
 
