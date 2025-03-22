@@ -64,6 +64,10 @@ python camel_database_agent/cli.py \
 
 ![](docs/screenshot-school-scheduling-database.png)
 
+#### Demo Video
+
+[![CAMEL DatabaseAgent Demo](docs/demo_video.jpg)](https://youtu.be/Fl065DB8Wqo "Watch the CAMEL DatabaseAgent Demo")
+
 ## Command Line Options
 
 > usage: cli.py [-h] --database-url DATABASE_URL [--openai-api-key OPENAI_API_KEY] [--openai-api-base-url OPENAI_API_BASE_URL] [--reset-train] [--read-only] [--language LANGUAGE]
