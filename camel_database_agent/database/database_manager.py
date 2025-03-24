@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from typing import Any, Callable, Iterator, List, TypeVar, Union
 
 import pandas as pd
-from sqlalchemy import MetaData, Result, create_engine, text
+from sqlalchemy import MetaData, Result, TextClause, create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -103,26 +103,42 @@ class DatabaseManager:
     def _check_sql(self, sql: Union[str, List[str]]) -> None:
         """Check if SQL is safe to execute (non-destructive)."""
         if self.read_only_model:
-            dangerous_keywords = [
-                "DROP",
-                "TRUNCATE",
-                "DELETE",
-                "UPDATE",
-                "INSERT",
-                "ALTER",
-                "CREATE",
-                "RENAME",
-                "REPLACE",
-            ]
+            dangerous_keywords = {
+                # Standalone keywords that modify data/schema
+                "DROP": True,
+                "TRUNCATE": True,
+                "DELETE": True,
+                "UPDATE": True,
+                "INSERT": True,
+                "ALTER": True,
+                "RENAME": True,
+                "REPLACE": True,
+                # CREATE is special case - some forms are read-only
+                "CREATE": {"SAFE_PREFIXES": ["SHOW CREATE"]},
+            }
 
             statements = []
             if isinstance(sql, str):
                 statements = [stmt.strip().upper() for stmt in sql.split(";") if stmt.strip()]
+            elif isinstance(sql, TextClause):
+                statements = [stmt.strip().upper() for stmt in sql.text if stmt.strip()]
             else:
                 statements = [stmt.strip().upper() for stmt in sql if stmt.strip()]
 
+            # Check each statement for dangerous keywords
             for stmt in statements:
-                # Check for dangerous operations
-                for keyword in dangerous_keywords:
-                    if keyword in stmt.split():
-                        raise SQLExecutionError('\n'.join(statements), read_only_message)
+                stmt_upper = stmt.upper()
+                for keyword, config in dangerous_keywords.items():
+                    if isinstance(config, bool) and config:
+                        if keyword in stmt_upper.split():
+                            raise SQLExecutionError('\n'.join(statements), read_only_message)
+                    elif isinstance(config, dict):
+                        # Handle special cases with exceptions
+                        if keyword in stmt_upper.split():
+                            is_safe = False
+                            for safe_prefix in config.get("SAFE_PREFIXES", []):
+                                if stmt_upper.startswith(safe_prefix):
+                                    is_safe = True
+                                    break
+                            if not is_safe:
+                                raise SQLExecutionError('\n'.join(statements), read_only_message)
