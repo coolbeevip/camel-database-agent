@@ -1,7 +1,6 @@
 from typing import ClassVar, List, Optional, Union
 
 from camel.models import BaseModelBackend
-from sqlalchemy import text
 
 from camel_database_agent.database.database_manager import (
     DatabaseManager,
@@ -24,10 +23,10 @@ class DatabaseSchemaDialectMySQL(DatabaseSchemaDialect):
         ddl_statements = []
         for table in self.database_manager.get_metadata().sorted_tables:
             self.table_names.append(table.name)
-            result = database_manager.select(text(f"SHOW CREATE TABLE {table.name}"))
-            row = result.fetchone()
-            create_table = row[1] if row else ""
-            ddl_statements.append(create_table + ";")
+            result = database_manager.select(f"SHOW CREATE TABLE {table.name}")
+            if result:
+                create_table = result[0]["Create Table"]
+                ddl_statements.append(create_table + ";")
         self.schema = "\n".join(ddl_statements)
 
     def get_schema(self) -> str:

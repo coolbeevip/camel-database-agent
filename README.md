@@ -12,8 +12,7 @@ An open-source toolkit helping developers build natural language database query 
 Current Support Status
 
 - ✅ Read-Only mode
-- ✅ SQLite support
-- ⏳ MySQL support (in development)  
+- ✅ SQLite/MySQL support
 - ⏳ PostgreSQL support (in development)  
 - ⏳ Spider 2.0-Lite evaluation (planned)
 
@@ -78,6 +77,29 @@ python camel_database_agent/cli.py \
 * reset-train: Reset the training data.
 * read-only: Read-only mode.
 * language: Language used to generate training data.
+
+## MySQL
+
+Start a MySQL container with the following command:
+
+```shell
+docker run -d \
+  --name camel_mysql \
+  -e MYSQL_ROOT_PASSWORD=123456 \
+  -e MYSQL_DATABASE=school_scheduling \
+  -e MYSQL_USER=camel \
+  -e MYSQL_PASSWORD=123456 \
+  -p 3306:3306 \
+  -v $(pwd)/database/mysql:/docker-entrypoint-initdb.d \
+  mysql:9
+```
+
+Connect to the MySQL database to answer questions.
+
+```shell
+python camel_database_agent/cli.py \
+--database-url mysql+pymysql://camel:123456@127.0.0.1:3306/school_scheduling
+```
 
 ## Spider 2.0-Lite(Planned)
 
