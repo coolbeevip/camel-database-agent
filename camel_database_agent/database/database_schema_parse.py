@@ -56,12 +56,13 @@ class DatabaseSchemaParse:
         """Parsing DDL SQL statements"""
         prompt = (
             "Here are some DDL statements from which you need to "
-            "extract table names, field names, data types, default "
+            "refer to table names, field names, data types, default "
             "values, etc., to generate summary information and extract "
             "the SQL statements for each table.\n\n"
         )
         prompt += f"```sql\n{text}```\n"
         prompt += "Please output the summary information and SQL script in JSON format."
+        print(prompt)
         response = self.parsing_agent.step(prompt, response_format=DDLRecordResponseFormat)
         ddl_record_response = DDLRecordResponseFormat.model_validate_json(response.msgs[0].content)
         return ddl_record_response.items

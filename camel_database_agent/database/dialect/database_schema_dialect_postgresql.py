@@ -42,7 +42,7 @@ class DatabaseSchemaDialectPostgresql(DatabaseSchemaDialect):
             result = self.database_manager.select(
                 f"SELECT obj_description('{table.name}'::regclass, 'pg_class')"
             )
-            table_comment = result.scalar()
+            table_comment = result[0]['obj_description']
             if table_comment:
                 create_stmt.append(f"COMMENT ON TABLE {table.name} IS '{table_comment}';")
 
@@ -53,7 +53,7 @@ class DatabaseSchemaDialectPostgresql(DatabaseSchemaDialect):
                     f"(SELECT ordinal_position FROM information_schema.columns "
                     f"WHERE table_name = '{table.name}' AND column_name = '{column.name}'))"
                 )
-                col_comment = result.scalar()
+                col_comment = result[0]['col_description']
                 if col_comment:
                     create_stmt.append(
                         f"COMMENT ON COLUMN {table.name}.{column.name} IS '{col_comment}';"

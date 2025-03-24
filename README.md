@@ -9,12 +9,13 @@ An open-source toolkit helping developers build natural language database query 
 - **DatabaseKnowledge**: A vector database storing database schema, sample data, and query few-shot examples
 - **DatabaseAgent**: An intelligent agent based on the CAMEL framework that utilizes DatabaseKnowledge to answer user questions
 
-Current Support Status
+Features:
 
-- ✅ Read-Only mode
-- ✅ SQLite/MySQL support
-- ⏳ PostgreSQL support (in development)  
-- ⏳ Spider 2.0-Lite evaluation (planned)
+- [x] Read-Only mode
+- [x] SQLite
+- [x] MySQL
+- [x] PostgreSQL  
+- [ ] Spider 2.0-Lite evaluation (planned)
 
 ## Quick Start
 
@@ -99,6 +100,28 @@ Connect to the MySQL database to answer questions.
 ```shell
 python camel_database_agent/cli.py \
 --database-url mysql+pymysql://camel:123456@127.0.0.1:3306/school_scheduling
+```
+
+## PostgreSQL
+
+Start a PostgreSQL container with the following command:
+
+```shell
+docker run -d \
+  --name camel_postgresql \
+  -e POSTGRES_USER=camel \
+  -e POSTGRES_PASSWORD=123456 \
+  -e POSTGRES_DB=school_scheduling \
+  -p 5432:5432 \
+  -v $(pwd)/database/postgresql:/docker-entrypoint-initdb.d \
+  postgres:17
+```
+
+Connect to the PostgreSQL database to answer questions.
+
+```shell
+python camel_database_agent/cli.py \
+--database-url postgresql://camel:123456@localhost:5432/school_scheduling
 ```
 
 ## Spider 2.0-Lite(Planned)
