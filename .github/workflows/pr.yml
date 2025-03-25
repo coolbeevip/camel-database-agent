@@ -27,9 +27,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: .venv
-        key: venv-${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}
+        key: venv-${{ runner.os }}-python-${{ hashFiles('pyproject.toml') }}-v2
         restore-keys: |
-          venv-${{ runner.os }}-python-
+          venv-${{ runner.os }}-python-v2
     
     - name: Install dependencies
       run: |
