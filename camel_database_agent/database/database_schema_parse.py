@@ -62,7 +62,6 @@ class DatabaseSchemaParse:
         )
         prompt += f"```sql\n{text}```\n"
         prompt += "Please output the summary information and SQL script in JSON format."
-        print(prompt)
         response = self.parsing_agent.step(prompt, response_format=DDLRecordResponseFormat)
         ddl_record_response = DDLRecordResponseFormat.model_validate_json(response.msgs[0].content)
         return ddl_record_response.items
