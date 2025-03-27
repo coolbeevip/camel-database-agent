@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import random
@@ -26,6 +27,7 @@ from camel_database_agent.database_base import (
     HumanMessage,
     MessageLog,
     MessageLogToEmpty,
+    SQLExecutionError,
     TrainLevel,
     messages_log,
     strip_sql_code_block,
@@ -33,6 +35,7 @@ from camel_database_agent.database_base import (
 )
 from camel_database_agent.database_prompt import (
     DATABASE_SUMMARY_OUTPUT_EXAMPLE,
+    QUESTION_CONVERT_SQL,
 )
 from camel_database_agent.datagen.sql_query_inference_pipeline import (
     DataQueryInferencePipeline,
@@ -43,6 +46,12 @@ from camel_database_agent.knowledge.database_knowledge_qdrant import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class QuestionMeta(BaseModel):
+    question: str
+    sql: str
+    prompt: str
 
 
 class DatabaseAgentResponse(BaseModel):
@@ -167,20 +176,41 @@ class DatabaseAgent(BaseAgent):
                 self.data_sql = f.read()
 
     @timing
-    def _parse_schema_to_knowledge(self, polish: bool = True) -> None:
+    def _parse_schema_to_knowledge(self, polish: bool = False) -> None:
         """Generate schema data to knowledge"""
         self.ddl_sql = (
             self.dialect.get_polished_schema(self.language)
             if polish
             else self.dialect.get_schema()
         )
+        # Save the schema to a file
+        with open(
+            os.path.join(self.knowledge_path, "ddl_origin.sql"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(self.dialect.get_schema())
+
+        # Save the polished schema to a file
         with open(
             os.path.join(self.knowledge_path, "ddl_sql.sql"),
             "w",
             encoding="utf-8",
         ) as f:
             f.write(self.ddl_sql)
+
         ddl_records: List[DDLRecord] = self.schema_parse.parse_ddl_record(self.ddl_sql)
+        with open(
+            os.path.join(self.knowledge_path, "ddl_records.json"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(
+                json.dumps(
+                    [record.model_dump() for record in ddl_records], ensure_ascii=False, indent=4
+                )
+            )
+
         self.database_knowledge_backend.add(ddl_records)
 
     @timing
@@ -194,6 +224,18 @@ class DatabaseAgent(BaseAgent):
         ) as f:
             f.write(self.data_sql)
         dml_records: List[DMLRecord] = self.schema_parse.parse_dml_record(self.data_sql)
+
+        with open(
+            os.path.join(self.knowledge_path, "data_records.json"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(
+                json.dumps(
+                    [record.model_dump() for record in dml_records], ensure_ascii=False, indent=4
+                )
+            )
+
         self.database_knowledge_backend.add(dml_records)
 
     @timing
@@ -210,6 +252,15 @@ class DatabaseAgent(BaseAgent):
             query_records: List[QueryRecord] = []
             while len(query_records) < query_samples_size:
                 query_records.extend(pipeline.generate(query_samples_size=query_samples_size))
+
+            with open(
+                os.path.join(self.knowledge_path, "question_sql.txt"),
+                "w",
+                encoding="utf-8",
+            ) as f:
+                for query_record in query_records:
+                    f.write(f"QUESTION: {query_record.question}\nSQL: {query_record.sql}\n\n")
+
             self.database_knowledge_backend.add(query_records)
         else:
             raise ValueError("ddl_sql and data_sql must be provided")
@@ -292,6 +343,10 @@ class DatabaseAgent(BaseAgent):
 
         if reset_train and os.path.exists(self.knowledge_path):
             self.database_knowledge_backend.clear()
+            self.ddl_sql = None
+            self.data_sql = None
+            self.database_summary = ""
+            self.recommendation_question = ""
             logger.info("Reset knowledge...")
 
         if (
@@ -319,41 +374,36 @@ class DatabaseAgent(BaseAgent):
             self.generate_database_summary(query_samples_size=query_samples_size)
 
     @timing
-    def question_to_sql(self, question: str, dialect_name: str) -> str:
+    def question_to_sql(self, question: str, dialect_name: str) -> QuestionMeta:
         """Question to SQL"""
-        prompt = (
-            f"The following is the table structure in the database and "
-            f"some common query SQL statements. Please convert the user's "
-            f"question into an SQL query statement. Note to comply "
-            f"with {dialect_name} syntax. Do not explain, "
-            f"just provide the SQL directly.\n\n"
-        )
-        prompt += "## Table Schema\n"
+        prompt = QUESTION_CONVERT_SQL.replace("{{dialect_name}}", dialect_name)
+
         ddl_records: List[DDLRecord] = self.database_knowledge_backend.query_ddl(question)
-        prompt += "```sql\n"
-        for ddl_record in ddl_records:
-            prompt += f"{ddl_record.sql}\n"
-        prompt += "```\n\n"
+        prompt = prompt.replace(
+            "{{table_schema}}", "\n".join([record.sql for record in ddl_records])
+        )
 
-        prompt += "## Data Example\n"
-        prompt += "```sql\n"
         data_records: List[DMLRecord] = self.database_knowledge_backend.query_data(question)
-        for data_record in data_records:
-            prompt += f"```{data_record.sql}\n"
-        prompt += "```\n\n"
+        prompt = prompt.replace(
+            "{{sample_data}}", "\n".join([record.sql for record in data_records])
+        )
 
-        # some few shot
         query_records: List[QueryRecord] = self.database_knowledge_backend.query_query(question)
-        for query_record in query_records:
-            prompt += f"Question: {query_record.question}\n"
-            prompt += f"SQL: {query_record.sql}\n\n"
+        prompt = prompt.replace(
+            "{{qa_pairs}}",
+            "\n".join(
+                [f"QUESTION: {record.question}\nSQL: {record.sql}\n\n" for record in query_records]
+            ),
+        )
 
-        prompt += f"Question: {question}\n"
-        prompt += "SQL: "
-        logger.debug(Fore.GREEN + "PROMPT:", prompt)
+        prompt = prompt.replace("{{question}}", question)
+        logger.debug(Fore.GREEN + "PROMPT:" + prompt)
         self.agent.reset()
         response = self.agent.step(prompt)
-        return strip_sql_code_block(response.msgs[0].content)
+
+        return QuestionMeta(
+            question=question, sql=strip_sql_code_block(response.msgs[0].content), prompt=prompt
+        )
 
     @messages_log
     def ask(
@@ -366,27 +416,37 @@ class DatabaseAgent(BaseAgent):
         if not message_log:
             message_log = MessageLogToEmpty()
         message_log.messages_writer(HumanMessage(session_id=session_id, content=question))
-        sql = self.question_to_sql(
+        question_meta = self.question_to_sql(
             question=question,
             dialect_name=self.database_manager.dialect_name(),
         )
-        message_log.messages_writer(AssistantMessage(session_id=session_id, content=sql))
         try:
-            dataset = self.database_manager.select(sql=sql, bind_pd=bind_pd)
+            message_log.messages_writer(
+                AssistantMessage(session_id=session_id, content=question_meta.sql)
+            )
+            dataset = self.database_manager.select(sql=question_meta.sql, bind_pd=bind_pd)
             message_log.messages_writer(
                 AssistantMessage(
                     session_id=session_id,
                     content=tabulate(dataset, headers="keys", tablefmt="psql"),
                 )
             )
-            return DatabaseAgentResponse(ask=question, dataset=dataset, sql=sql)
-        except Exception as e:
-            logger.error(e)
+            return DatabaseAgentResponse(ask=question, dataset=dataset, sql=question_meta.sql)
+        except SQLExecutionError as e:
             message_log.messages_writer(AssistantMessage(session_id=session_id, content=str(e)))
             return DatabaseAgentResponse(
                 ask=question,
                 dataset=None,
-                sql=sql,
+                sql=e.sql,
+                success=False,
+                error=e.error_message,
+            )
+        except Exception as e:
+            message_log.messages_writer(AssistantMessage(session_id=session_id, content=str(e)))
+            return DatabaseAgentResponse(
+                ask=question,
+                dataset=None,
+                sql=question_meta.sql,
                 success=False,
                 error=str(e),
             )

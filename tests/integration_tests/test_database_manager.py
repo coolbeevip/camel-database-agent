@@ -22,6 +22,6 @@ class TestDatabaseManager(TestCase):
 
     def test_select_with_fail(self) -> None:
         sql = "select * from no_exist_table"
-        result = self.database_manager.select(sql)
-        assert isinstance(result, SQLExecutionError)
-        assert result.sql == sql
+        with self.assertRaises(SQLExecutionError) as context:
+            self.database_manager.select(sql)
+        assert context.exception.sql == sql

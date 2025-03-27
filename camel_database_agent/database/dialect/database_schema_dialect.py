@@ -6,6 +6,7 @@ from camel.agents import ChatAgent
 from camel.models import BaseModelBackend
 
 from camel_database_agent.database.database_manager import DatabaseManager
+from camel_database_agent.database_prompt import POLISH_SCHEMA_OUTPUT_EXAMPLE
 
 logger = logging.getLogger(__name__)
 
@@ -50,16 +51,9 @@ class DatabaseSchemaDialect(abc.ABC):
 
     def get_polished_schema(self, language: str = "English") -> str:
         if self.schema_polish_agent:
-            prompt = (
-                f"Please optimize the SQL schema of the database in {language}, "
-                f"ensuring it includes table name comments, field comments, "
-                f"foreign key explanations, etc., to make it more readable.\n\n"
-            )
-            prompt += f"```sql\n{self.get_schema()}```\n\n"
-            prompt += (
-                "Now, please directly output the optimized SQL Schema. "
-                "Do not explain the process and optimization ideas."
-            )
+            prompt = POLISH_SCHEMA_OUTPUT_EXAMPLE.replace(
+                "{{ddl_sql}}", self.get_schema()
+            ).replace("{{language}}", language)
             response = self.schema_polish_agent.step(prompt)
             return response.msgs[0].content
         else:

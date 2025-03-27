@@ -23,7 +23,7 @@ class TestDatabaseSchemaParse(TestCase):
             model_type=ModelType.DEFAULT,
         )
         cls.parse = DatabaseSchemaParse(
-            database_manager=DatabaseManager(db_url="sqlite:///example.db"),
+            database_manager=DatabaseManager(db_url="sqlite:///:memory:"),
             model=model,
         )
 

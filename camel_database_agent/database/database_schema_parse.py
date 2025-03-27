@@ -55,12 +55,12 @@ class DatabaseSchemaParse:
     def parse_ddl_record(self, text: str) -> List[DDLRecord]:
         """Parsing DDL SQL statements"""
         prompt = (
-            "Here are some DDL statements from which you need to "
-            "refer to table names, field names, data types, default "
-            "values, etc., to generate summary information and extract "
-            "the SQL statements for each table.\n\n"
+            "The following are some DDL script. Please read the script in its "
+            "entirety and provide descriptions for the tables and fields to "
+            "generate summary information and extract the SQL script for each "
+            "table.\n\n"
         )
-        prompt += f"```sql\n{text}```\n"
+        prompt += f"```sql\n{text}```\n\n"
         prompt += "Please output the summary information and SQL script in JSON format."
         response = self.parsing_agent.step(prompt, response_format=DDLRecordResponseFormat)
         ddl_record_response = DDLRecordResponseFormat.model_validate_json(response.msgs[0].content)

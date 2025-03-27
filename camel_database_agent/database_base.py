@@ -102,12 +102,12 @@ def timing(func: T) -> T:
         try:
             spinner_thread.start()
             result = func(*args, **kwargs)
-            end_time = time.perf_counter()
-            total_time = end_time - start_time
         finally:
             # sys.stdout.write('\r' + ' ' * 100 + '\r')
             stop_spinner.set()
             spinner_thread.join()
+            end_time = time.perf_counter()
+            total_time = end_time - start_time
             logger.info(f"\r{info} Took {Fore.GREEN}{total_time:.4f} seconds{Fore.RESET}")
         return result
 

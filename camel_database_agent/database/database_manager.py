@@ -61,7 +61,7 @@ class DatabaseManager:
     @with_session
     def select(
         self, session: Session, sql: str, bind_pd: bool = False
-    ) -> Union[List[dict], pd.DataFrame, SQLExecutionError]:
+    ) -> Union[List[dict], pd.DataFrame]:
         """Execute Query SQL"""
         self._check_sql(sql)
         try:
@@ -74,7 +74,7 @@ class DatabaseManager:
                 rows = [dict(zip(column_names, row)) for row in result]
                 return rows
         except OperationalError as e:
-            return SQLExecutionError(sql, str(e))
+            raise SQLExecutionError(sql, str(e))
 
     @with_session
     def execute(

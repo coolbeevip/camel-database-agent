@@ -12,6 +12,7 @@ from camel_database_agent.database.database_schema_parse import (
     QueryRecordResponseFormat,
 )
 from camel_database_agent.database_base import SQLExecutionError, timing
+from camel_database_agent.database_prompt import QUESTION_INFERENCE_PIPELINE
 
 logger = logging.getLogger(__name__)
 
@@ -47,30 +48,16 @@ class DataQueryInferencePipeline:
     @timing
     def generate(self, query_samples_size: int = 20) -> List[QueryRecord]:
         """Data generation for samples"""
-        # Create prompt with database schema and example data
-        prompt = (
-            "Please carefully analyze the following database information and "
-            "conduct an in-depth analysis from a business perspective. "
-            "What business query questions might users raise? Please fully consider "
-            "some complex query scenarios, including but not limited to multi-table "
-            "associations, grouping statistics, etc.\n\n"
-        )
-        prompt += "Database Schema:\n\n"
-        prompt += "```sql\n" + self.ddl_sql + "\n```"
-        prompt += "Data Example:\n\n"
-        prompt += "```sql\n" + self.data_sql + "\n```"
-        prompt += (
-            f"\nNow, Please generate {query_samples_size} real user "
-            f"query questions along with the corresponding SQL query "
-            f"statements without using placeholders. Please output in "
-            f"JSON format."
-        )
-
         dataset: List[QueryRecord] = []
-        attempt_count = 0
         # Generate samples until we have enough
+        error_query_records: List[QueryRecord] = []
         while len(dataset) < query_samples_size:
-            attempt_count += 1
+            prompt = QUESTION_INFERENCE_PIPELINE.replace("{{ddl_sql}}", self.ddl_sql)
+            prompt = prompt.replace("{{data_sql}}", self.data_sql)
+            prompt = prompt.replace(
+                "{{query_samples_size}}", str(query_samples_size - len(dataset))
+            )
+
             response = self.question_agent.step(prompt, response_format=QueryRecordResponseFormat)
             content = response.msgs[0].content.strip()
 
@@ -84,12 +71,14 @@ class DataQueryInferencePipeline:
                     try:
                         self.database_manager.select(item.sql)
                         dataset.append(item)
-                    except SQLExecutionError:
+                    except SQLExecutionError as e:
                         # TODO Failed questions and SQL need to be regenerated
-                        logger.error(f"Error executing query: {item.question} {item.sql}")
+                        logger.error(
+                            f"{Fore.RED}SQLExecutionError{Fore.RESET}: {e.sql} {e.error_message}"
+                        )
+                        error_query_records.append(item)
                     except Exception as e:
-                        logger.debug(f"Generated item: {item}")
-                        logger.error(f"Error executing query: {e}")
+                        logger.error(f"Error executing query: {item.question} {item.sql} {e!s}")
                         continue
                     finally:
                         logger.info(

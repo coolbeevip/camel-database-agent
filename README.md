@@ -29,7 +29,7 @@ cd camel-database-agent
 pip install uv ruff mypy
 uv venv .venv --python=3.10
 source .venv/bin/activate
-uv pip install -e ".[dev,test]"
+uv sync --all-extras
 ````
 
 #### Music Database
@@ -141,34 +141,8 @@ Run the Spider 2.0-Lite evaluation.
 
 ```shell
 cd spider2_lite
-export API_KEY=sk-xx
+export OPENAI_API_KEY=sk-xxx
+export OPENAI_API_BASE_URL=https://api.openai.com/v1/
+export MODEL_NAME=gpt-4o-mini
 python spider2_run.py
-```
-
-## Development
-
-Install the development dependencies.
-```shell
-pip install uv ruff mypy
-uv pip install -e ".[dev]"
-```
-
-Run code formatters
-```shell
-make format
-```
-
-Run code linters
-```shell
-make lint
-```
-
-Run unit tests
-```shell
-make test
-```
-
-Create a uv.lock file from pyproject.toml
-```shell
-uv pip compile pyproject.toml -o uv.lock --resolution=highest
 ```
