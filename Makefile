@@ -16,6 +16,8 @@ lint_tests: PYTHON_FILES=tests
 lint_tests: MYPY_CACHE=.mypy_cache_test
 
 lint lint_diff lint_package lint_tests:
+	ruff -V
+	mypy -V
 	[ "$(PYTHON_FILES)" = "" ] || ruff check $(PYTHON_FILES)
 	[ "$(PYTHON_FILES)" = "" ] || ruff format $(PYTHON_FILES) --diff
 	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && mypy $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
