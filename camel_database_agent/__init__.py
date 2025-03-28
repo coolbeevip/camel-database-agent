@@ -1,9 +1,9 @@
 __all__ = [
-    "DatabaseAgent",
     "DataQueryInferencePipeline",
+    "DatabaseAgent",
     "DatabaseSchemaDialectMySQL",
-    "DatabaseSchemaDialectSqlite",
     "DatabaseSchemaDialectPostgresql",
+    "DatabaseSchemaDialectSqlite",
 ]
 
 from camel_database_agent.database.dialect.database_schema_dialect_mysql import (

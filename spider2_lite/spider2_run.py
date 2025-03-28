@@ -84,7 +84,7 @@ with open(os.path.join(current_dir, "spider2-lite.jsonl"), "r") as f:
         except Exception as e:
             print(f"{Fore.RED}{e!s}{Fore.RESET}")
         finally:
-            print(f"process {success+failed}/{total}")
+            print(f"process {success + failed}/{total}")
 
         with open(os.path.join(spider2_workspace, "spider2-lite-result.jsonl"), "a") as f:
             f.write(json.dumps(example) + "\n")
