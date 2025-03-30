@@ -68,7 +68,7 @@ python camel_database_agent/cli.py \
 
 ## Demo Video
 
-[![CAMEL DatabaseAgent Demo](docs/demo_video.jpg)](https://youtu.be/Fl065DB8Wqo "Watch the CAMEL DatabaseAgent Demo")
+[![CAMEL DatabaseAgent Demo](docs/demo_video.png)](https://youtu.be/Fl065DB8Wqo "Watch the CAMEL DatabaseAgent Demo")
 
 ## Command Line Options
 
