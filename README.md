@@ -4,7 +4,7 @@
 [![PyPi version](https://img.shields.io/pypi/v/camel-database-agent.svg)](https://pypi.org/project/camel-database-agent/)
 [![build](https://github.com/coolbeevip/camel-database-agent/actions/workflows/pr.yml/badge.svg)](https://github.com/coolbeevip/camel-database-agent/actions/workflows/pr.yml)
 
-An open-source toolkit helping developers build natural language database query solutions based on [CAMEL](https://github.com/camel-ai/camel).
+An open-source toolkit helping developers build natural language database query solutions based on [CAMEL-AI](https://github.com/camel-ai/camel).
 
 ## Core Components
 
@@ -46,6 +46,7 @@ source .venv/bin/activate
 export OPENAI_API_KEY=sk-xxx
 export OPENAI_API_BASE_URL=https://api.openai.com/v1/
 export MODEL_NAME=gpt-4o-mini
+export EMBEDD_MODEL_NAME=text-embedding-ada-002
 python camel_database_agent/cli.py \
 --database-url sqlite:///database/sqlite/music.sqlite
 ```
@@ -128,7 +129,7 @@ python camel_database_agent/cli.py \
 --database-url postgresql://camel:123456@localhost:5432/school_scheduling
 ```
 
-## How to Use
+## Developer Integration
 
 ```python
 import logging

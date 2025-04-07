@@ -11,7 +11,7 @@ requires-python = ">=3.10,<3.13"
 readme = "README.md"
 license = "Apache-2.0"
 dependencies = [
-    "camel-ai[all]>=0.2.36",
+    "camel-ai[all]>=0.2.40",
     "tabulate>=0.9",
     "colorama>=0.4",
     "dotenv>=0.9",
