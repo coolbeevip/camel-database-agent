@@ -12,14 +12,15 @@ from threading import Event, Thread
 from urllib.parse import urlparse
 
 import pandas as pd
-from camel.embeddings import OpenAIEmbedding
+from camel.embeddings import OpenAICompatibleEmbedding
 from camel.models import ModelFactory
-from camel.types import ModelPlatformType, ModelType
+from camel.types import ModelPlatformType
 from colorama import Fore
 from tabulate import tabulate
 
 from camel_database_agent import DatabaseAgent
 from camel_database_agent.database.database_manager import DatabaseManager
+from camel_database_agent.database_agent import DatabaseAgentResponse
 from camel_database_agent.database_base import TrainLevel, spinner
 
 """设置日志"""
@@ -39,7 +40,7 @@ pd.set_option("display.width", None)  # Auto-detect display width
 pd.set_option("display.max_colwidth", None)  # Show full content of each cell
 
 
-def generate_db_id(db_url: str) -> str:
+def generate_db_id(db_url: str, language: str) -> str:
     """
     Generate a unique ID from a database URL by hashing relevant parts.
 
@@ -58,7 +59,7 @@ def generate_db_id(db_url: str) -> str:
     path = parsed_url.path
 
     # Create a string with the most important identifying information
-    db_identifier = f"{dialect}:{netloc}{path}"
+    db_identifier = f"{dialect}:{netloc}{path}:{language}"
 
     # Create a hash of the identifier
     db_hash = hashlib.md5(db_identifier.encode()).hexdigest()
@@ -77,13 +78,33 @@ def main() -> None:
         required=True,
         help="Database URL (e.g., sqlite:///db.sqlite)",
     )
-    parser.add_argument("--openai-api-key", "-key", required=False, help="OpenAI KEY")
+    parser.add_argument(
+        "--openai-api-key",
+        "-key",
+        required=False,
+        default=os.environ.get("OPENAI_API_KEY"),
+        help="OpenAI KEY",
+    )
     parser.add_argument(
         "--openai-api-base-url",
         "-url",
         required=False,
-        default="https://api.openai.com/v1",
+        default=os.environ.get("OPENAI_API_BASE_URL", "https://api.openai.com/v1"),
         help="OPENAI API",
+    )
+    parser.add_argument(
+        "--model-name",
+        "-em",
+        required=False,
+        default=os.environ.get("MODEL_NAME", "gpt-4o-mini"),
+        help="Model name, such as gpt-3.5-turbo or gpt-4o-mini",
+    )
+    parser.add_argument(
+        "--embedd-model-name",
+        "-m",
+        required=False,
+        default=os.environ.get("EMBED_MODEL_NAME", "text-embedding-ada-002"),
+        help="Embedding model name, such as text-embedding-ada-002",
     )
     parser.add_argument("--reset-train", "-rt", action="store_true", help="Retraining knowledge")
     parser.add_argument(
@@ -96,12 +117,18 @@ def main() -> None:
         default="English",
         help="The language you used to ask the question, such as English or Chinese.",
     )
+    parser.add_argument(
+        "--timeout",
+        required=False,
+        default=180,
+        help="The timeout value in seconds for API calls.",
+    )
     args = parser.parse_args()
 
     # Create a data directory for the database agent
     user_home = os.path.expanduser("~")
     data_path = os.path.join(
-        user_home, "camel_database_agent_data", generate_db_id(args.database_url)
+        user_home, "camel_database_agent_data", generate_db_id(args.database_url, args.language)
     )
 
     # Create a database manager and database agent
@@ -110,16 +137,16 @@ def main() -> None:
         interactive_mode=True,
         database_manager=database_manager,
         model=ModelFactory.create(
-            model_platform=ModelPlatformType.DEFAULT,
-            model_type=ModelType.GPT_4O_MINI,
-            api_key=args.openai_api_key if args.openai_api_key else os.getenv("OPENAI_API_KEY"),
-            url=args.openai_api_base_url
-            if args.openai_api_base_url
-            else os.getenv("OPENAI_API_BASE_URL"),
-        ),
-        embedding_model=OpenAIEmbedding(
+            model_platform=ModelPlatformType.OPENAI_COMPATIBLE_MODEL,
+            model_type=args.model_name,
             api_key=args.openai_api_key,
             url=args.openai_api_base_url,
+            timeout=args.timeout,
+        ),
+        embedding_model=OpenAICompatibleEmbedding(
+            api_key=args.openai_api_key,
+            url=args.openai_api_base_url,
+            model_type=args.embedd_model_name,
         ),
         language=args.language,
         data_path=data_path,
@@ -172,7 +199,7 @@ def main() -> None:
                 spinner_thread.start()
 
                 # Ask the database agent
-                response = database_agent.ask(
+                response: DatabaseAgentResponse = database_agent.ask(
                     session_id=session_id,
                     question=user_question,
                 )
@@ -192,6 +219,10 @@ def main() -> None:
                     print(f"{Fore.YELLOW}{response.sql}{Fore.RESET}")
                 else:
                     print(f"{Fore.RED}+ {response.error}{Fore.RESET}")
+                if response.usage:
+                    print(
+                        f"{Fore.YELLOW}Tokens used: {response.usage['total_tokens']}{Fore.RESET}"
+                    )
             except Exception as e:
                 # Make sure to stop the spinner on exception
                 if 'stop_spinner' in locals() and not stop_spinner.is_set():
