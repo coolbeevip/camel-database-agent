@@ -52,6 +52,7 @@ class QuestionMeta(BaseModel):
     question: str
     sql: str
     prompt: str
+    usage: dict
 
 
 class DatabaseAgentResponse(BaseModel):
@@ -60,6 +61,7 @@ class DatabaseAgentResponse(BaseModel):
     sql: Optional[str] = None
     success: bool = True
     error: Optional[str] = None
+    usage: Optional[dict] = None
 
 
 class DatabaseAgent(BaseAgent):
@@ -402,7 +404,10 @@ class DatabaseAgent(BaseAgent):
         response = self.agent.step(prompt)
 
         return QuestionMeta(
-            question=question, sql=strip_sql_code_block(response.msgs[0].content), prompt=prompt
+            question=question,
+            sql=strip_sql_code_block(response.msgs[0].content),
+            prompt=prompt,
+            usage=response.info['usage'],
         )
 
     @messages_log
@@ -431,7 +436,12 @@ class DatabaseAgent(BaseAgent):
                     content=tabulate(dataset, headers="keys", tablefmt="psql"),
                 )
             )
-            return DatabaseAgentResponse(ask=question, dataset=dataset, sql=question_meta.sql)
+            return DatabaseAgentResponse(
+                ask=question,
+                dataset=dataset,
+                sql=question_meta.sql,
+                usage=question_meta.usage,
+            )
         except SQLExecutionError as e:
             message_log.messages_writer(AssistantMessage(session_id=session_id, content=str(e)))
             return DatabaseAgentResponse(
@@ -440,6 +450,7 @@ class DatabaseAgent(BaseAgent):
                 sql=e.sql,
                 success=False,
                 error=e.error_message,
+                usage=question_meta.usage,
             )
         except Exception as e:
             message_log.messages_writer(AssistantMessage(session_id=session_id, content=str(e)))
