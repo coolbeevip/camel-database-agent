@@ -10,6 +10,7 @@ from camel_database_agent.database.database_manager import DatabaseManager
 from camel_database_agent.database.database_schema_parse import (
     QueryRecord,
     QueryRecordResponseFormat,
+    SchemaParseResponse,
 )
 from camel_database_agent.database_base import SQLExecutionError, timing
 from camel_database_agent.database_prompt import QUESTION_INFERENCE_PIPELINE
@@ -46,9 +47,10 @@ class DataQueryInferencePipeline:
         )
 
     @timing
-    def generate(self, query_samples_size: int = 20) -> List[QueryRecord]:
+    def generate(self, query_samples_size: int = 20) -> SchemaParseResponse | None:
         """Data generation for samples"""
         dataset: List[QueryRecord] = []
+        usage: Optional[dict] = None
         # Generate samples until we have enough
         error_query_records: List[QueryRecord] = []
         while len(dataset) < query_samples_size:
@@ -59,6 +61,7 @@ class DataQueryInferencePipeline:
             )
 
             response = self.question_agent.step(prompt, response_format=QueryRecordResponseFormat)
+            usage = response.info['usage']
             content = response.msgs[0].content.strip()
 
             if content.startswith("```json") or content.startswith("```"):
@@ -89,4 +92,4 @@ class DataQueryInferencePipeline:
                 logger.error(f"Error parsing response: {e}")
                 logger.debug(f"Raw content that caused error: {content[:200]}...")
 
-        return dataset[:query_samples_size]
+        return SchemaParseResponse(data=dataset[:query_samples_size], usage=usage)

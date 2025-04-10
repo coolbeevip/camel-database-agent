@@ -4,6 +4,7 @@ from typing import ClassVar, List, Optional, Type, TypeVar, Union
 
 from camel.agents import ChatAgent
 from camel.models import BaseModelBackend
+from tabulate import tabulate
 
 from camel_database_agent.database.database_manager import DatabaseManager
 from camel_database_agent.database_prompt import POLISH_SCHEMA_OUTPUT_EXAMPLE
@@ -81,38 +82,40 @@ class DatabaseSchemaDialect(abc.ABC):
         Must be implemented by all dialect subclasses.
         """
         metadata = self.database_manager.get_metadata()
-        sample_data_sql = []
+        sample_data = []
 
         for table_name in metadata.tables:
-            table = metadata.tables[table_name]
-            column_names = [column.name for column in table.columns]
+            # table = metadata.tables[table_name]
+            # column_names = [column.name for column in table.columns]
 
             sample_query = f"SELECT * FROM {table_name} LIMIT {data_samples_size}"
             try:
                 rows = self.database_manager.select(sample_query)
-                for row in rows:
-                    columns = []
-                    values = []
-
-                    for col_name in column_names:
-                        if col_name in row and row[col_name] is not None:
-                            columns.append(col_name)
-                            if isinstance(row[col_name], str):
-                                values.append("'" + row[col_name].replace("'", "''") + "'")
-                            elif isinstance(row[col_name], (int, float)):
-                                values.append(str(row[col_name]))
-                            else:
-                                values.append(f"'{row[col_name]!s}'")
-
-                    if columns and values:
-                        columns_stmt = ', '.join(columns)
-                        values_stmt = ', '.join(values)
-                        insert_stmt = (
-                            f"INSERT INTO {table_name} ({columns_stmt}) VALUES ({values_stmt});"
-                        )
-                        sample_data_sql.append(insert_stmt)
+                dataset = tabulate(tabular_data=rows, headers='keys', tablefmt='psql')
+                sample_data.append(f"## {table_name}\n\n{dataset}")
+                # for row in rows:
+                #     columns = []
+                #     values = []
+                #
+                #     for col_name in column_names:
+                #         if col_name in row and row[col_name] is not None:
+                #             columns.append(col_name)
+                #             if isinstance(row[col_name], str):
+                #                 values.append("'" + row[col_name].replace("'", "''") + "'")
+                #             elif isinstance(row[col_name], (int, float)):
+                #                 values.append(str(row[col_name]))
+                #             else:
+                #                 values.append(f"'{row[col_name]!s}'")
+                #
+                #     if columns and values:
+                #         columns_stmt = ', '.join(columns)
+                #         values_stmt = ', '.join(values)
+                #         insert_stmt = (
+                #             f"INSERT INTO {table_name} ({columns_stmt}) VALUES ({values_stmt});"
+                #         )
+                #         sample_data_sql.append(insert_stmt)
 
             except Exception as e:
                 logger.warning(f"Error sampling data from table {table_name}: {e}")
 
-        return "\n".join(sample_data_sql)
+        return "\n\n".join(sample_data)

@@ -24,6 +24,17 @@ class TrainLevel(Enum):
     HIGH = "high"
 
 
+class TokenUsage(BaseModel):
+    completion_tokens: int = 0
+    prompt_tokens: int = 0
+    total_tokens: int = 0
+
+    def add_token(self, usage: "TokenUsage"):
+        self.completion_tokens += usage.completion_tokens
+        self.prompt_tokens += usage.prompt_tokens
+        self.total_tokens += usage.total_tokens
+
+
 class Message(BaseModel):
     session_id: str
     role: str

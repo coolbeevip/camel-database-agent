@@ -18,7 +18,7 @@ from camel_database_agent.database.database_schema_parse import (
 )
 
 RecordType = TypeVar("RecordType", DDLRecord, DMLRecord, QueryRecord)
-
+T = TypeVar("T", DDLRecord, DMLRecord, QueryRecord)
 
 class DatabaseKnowledge(ABC):
     def __init__(

@@ -84,8 +84,13 @@ Database System: {{dialect_name}}
 ```sql
 {{sample_data}}
 ```
-
+## Few-Shot Example
 {{qa_pairs}}
-QUESTION: {{question}}
-SQL: 
+
+## User Question
+{{question}}
+
+## Instructions
+1. Follow {{dialect_name}} syntax
+2. Do not provide explanations, just give the SQL statement directly
 """

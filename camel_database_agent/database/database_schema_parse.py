@@ -1,4 +1,5 @@
-from typing import List, Union
+import textwrap
+from typing import List, Optional, TypeVar, Union
 
 from camel.agents import ChatAgent
 from camel.models import BaseModelBackend
@@ -17,13 +18,21 @@ class DDLRecord(BaseModel):
 class DMLRecord(BaseModel):
     id: str
     summary: str
-    sql: str
+    dataset: str
 
 
 class QueryRecord(BaseModel):
     id: str
     question: str
     sql: str
+
+
+RecordType = TypeVar("RecordType", DDLRecord, DMLRecord, QueryRecord)
+
+
+class SchemaParseResponse(BaseModel):
+    data: List[RecordType]
+    usage: Optional[dict]
 
 
 class DDLRecordResponseFormat(BaseModel):
@@ -52,36 +61,74 @@ class DatabaseSchemaParse:
         )
 
     @timing
-    def parse_ddl_record(self, text: str) -> List[DDLRecord]:
+    def parse_ddl_record(self, text: str) -> SchemaParseResponse:
         """Parsing DDL SQL statements"""
         prompt = (
-            "The following are some DDL script. Please read the script in its "
-            "entirety and provide descriptions for the tables and fields to "
-            "generate summary information and extract the SQL script for each "
-            "table.\n\n"
+            "Translate the following information into a JSON array format, "
+            "with each JSON object in the array containing three "
+            "elements: "
+            "\"id\" for the table name, "
+            "\"summary\" for a summary of the table, and "
+            "\"sql\" for the SQL statement of the table creation.\n\n"
         )
-        prompt += f"```sql\n{text}```\n\n"
-        prompt += "Please output the summary information and SQL script in JSON format."
+        if text.startswith("```sql"):
+            prompt += f"{text}\n\n"
+        else:
+            prompt += f"```sql\n{text}```\n\n"
+
+        # 非 openai 模型要增加以下片段
+        prompt += textwrap.dedent(
+            "Output Format:\n"
+            "{"
+            "    \"items\":"
+            "        ["
+            "            {"
+            "                \"id\": \"<table name>\","
+            "                \"summary\": \"<table summary>\","
+            "                \"sql\": \"<table ddl script>\""
+            "            }"
+            "        ]"
+            "}\n\n"
+        )
+        prompt += "Now, directly output the JSON array without explanation."
         response = self.parsing_agent.step(prompt, response_format=DDLRecordResponseFormat)
         ddl_record_response = DDLRecordResponseFormat.model_validate_json(response.msgs[0].content)
-        return ddl_record_response.items
+        return SchemaParseResponse(data=ddl_record_response.items, usage=response.info["usage"])
 
     @timing
-    def parse_dml_record(self, text: str) -> List[DMLRecord]:
+    def parse_dml_record(self, text: str) -> SchemaParseResponse:
         """Parsing DML SQL statements"""
         prompt = (
-            "The following are some DML statements from which you need "
-            "to extract table names, field names, and generate summary "
-            "information, as well as extract each SQL statement.\n\n"
+            "Translate the following information into a JSON array format, "
+            "with each JSON object in the array containing three "
+            "elements: "
+            "\"id\" for the table name, "
+            "\"summary\" for a summary of the table, and "
+            "\"dataset\" for the Markdown of the data.\n\n"
         )
-        prompt += f"```sql\n{text}```\n"
-        prompt += "Please output the summary information and SQL script in JSON format."
+        prompt += f"{text}\n\n"
+
+        # 非 openai 模型要增加以下片段
+        prompt += textwrap.dedent(
+            "Output Format:\n"
+            "{"
+            "    \"items\":"
+            "        ["
+            "            {"
+            "                \"id\": \"<table name>\","
+            "                \"summary\": \"<table summary>\","
+            "                \"dataset\": \"<markdown dataset>\""
+            "            }"
+            "        ]"
+            "}\n\n"
+        )
+        prompt += "Now, directly output the JSON array without explanation."
         response = self.parsing_agent.step(prompt, response_format=DMLRecordResponseFormat)
         dml_record_response = DMLRecordResponseFormat.model_validate_json(response.msgs[0].content)
-        return dml_record_response.items
+        return SchemaParseResponse(data=dml_record_response.items, usage=response.info["usage"])
 
     @timing
-    def parse_query_record(self, text: str) -> List[QueryRecord]:
+    def parse_query_record(self, text: str) -> SchemaParseResponse:
         """Parsing Query SQL statements"""
         prompt = (
             "The following is an analysis of user query requirements, "
@@ -94,4 +141,4 @@ class DatabaseSchemaParse:
         query_record_response = QueryRecordResponseFormat.model_validate_json(
             response.msgs[0].content
         )
-        return query_record_response.items
+        return SchemaParseResponse(data=query_record_response.items, usage=response.info["usage"])

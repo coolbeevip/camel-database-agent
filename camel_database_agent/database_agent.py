@@ -18,6 +18,7 @@ from camel_database_agent.database.database_schema_parse import (
     DDLRecord,
     DMLRecord,
     QueryRecord,
+    SchemaParseResponse,
 )
 from camel_database_agent.database.dialect.database_schema_dialect import (
     DatabaseSchemaDialect,
@@ -28,6 +29,7 @@ from camel_database_agent.database_base import (
     MessageLog,
     MessageLogToEmpty,
     SQLExecutionError,
+    TokenUsage,
     TrainLevel,
     messages_log,
     strip_sql_code_block,
@@ -178,7 +180,7 @@ class DatabaseAgent(BaseAgent):
                 self.data_sql = f.read()
 
     @timing
-    def _parse_schema_to_knowledge(self, polish: bool = False) -> None:
+    def _parse_schema_to_knowledge(self, polish: bool = False) -> TokenUsage:
         """Generate schema data to knowledge"""
         self.ddl_sql = (
             self.dialect.get_polished_schema(self.language)
@@ -201,7 +203,9 @@ class DatabaseAgent(BaseAgent):
         ) as f:
             f.write(self.ddl_sql)
 
-        ddl_records: List[DDLRecord] = self.schema_parse.parse_ddl_record(self.ddl_sql)
+        schema_parse_response: SchemaParseResponse = self.schema_parse.parse_ddl_record(
+            self.ddl_sql
+        )
         with open(
             os.path.join(self.knowledge_path, "ddl_records.json"),
             "w",
@@ -209,14 +213,21 @@ class DatabaseAgent(BaseAgent):
         ) as f:
             f.write(
                 json.dumps(
-                    [record.model_dump() for record in ddl_records], ensure_ascii=False, indent=4
+                    [record.model_dump() for record in schema_parse_response.data],
+                    ensure_ascii=False,
+                    indent=4,
                 )
             )
 
-        self.database_knowledge_backend.add(ddl_records)
+        self.database_knowledge_backend.add(schema_parse_response.data)
+        return TokenUsage(
+            completion_tokens=schema_parse_response.usage["completion_tokens"],
+            prompt_tokens=schema_parse_response.usage["prompt_tokens"],
+            total_tokens=schema_parse_response.usage["total_tokens"],
+        )
 
     @timing
-    def _parse_sampled_data_to_knowledge(self, data_samples_size: int = 5) -> None:
+    def _parse_sampled_data_to_knowledge(self, data_samples_size: int = 5) -> TokenUsage:
         """Generate sampled data to knowledge"""
         self.data_sql = self.dialect.get_sampled_data(data_samples_size=data_samples_size)
         with open(
@@ -225,7 +236,10 @@ class DatabaseAgent(BaseAgent):
             encoding="utf-8",
         ) as f:
             f.write(self.data_sql)
-        dml_records: List[DMLRecord] = self.schema_parse.parse_dml_record(self.data_sql)
+
+        schema_parse_response: SchemaParseResponse = self.schema_parse.parse_dml_record(
+            self.data_sql
+        )
 
         with open(
             os.path.join(self.knowledge_path, "data_records.json"),
@@ -234,14 +248,21 @@ class DatabaseAgent(BaseAgent):
         ) as f:
             f.write(
                 json.dumps(
-                    [record.model_dump() for record in dml_records], ensure_ascii=False, indent=4
+                    [record.model_dump() for record in schema_parse_response.data],
+                    ensure_ascii=False,
+                    indent=4,
                 )
             )
 
-        self.database_knowledge_backend.add(dml_records)
+        self.database_knowledge_backend.add(schema_parse_response.data)
+        return TokenUsage(
+            completion_tokens=schema_parse_response.usage["completion_tokens"],
+            prompt_tokens=schema_parse_response.usage["prompt_tokens"],
+            total_tokens=schema_parse_response.usage["total_tokens"],
+        )
 
     @timing
-    def _parse_query_to_knowledge(self, query_samples_size: int = 20) -> None:
+    def _parse_query_to_knowledge(self, query_samples_size: int = 20) -> TokenUsage:
         """Generate some queries to knowledge"""
         if self.ddl_sql and self.data_sql:
             pipeline = DataQueryInferencePipeline(
@@ -252,9 +273,13 @@ class DatabaseAgent(BaseAgent):
                 language=self.language,
             )
             query_records: List[QueryRecord] = []
+            usage: Optional[dict] = None
             while len(query_records) < query_samples_size:
-                query_records.extend(pipeline.generate(query_samples_size=query_samples_size))
-
+                schema_parse_response: SchemaParseResponse = pipeline.generate(
+                    query_samples_size=query_samples_size
+                )
+                usage = schema_parse_response.usage
+                query_records.extend(schema_parse_response.data)
             with open(
                 os.path.join(self.knowledge_path, "question_sql.txt"),
                 "w",
@@ -264,11 +289,16 @@ class DatabaseAgent(BaseAgent):
                     f.write(f"QUESTION: {query_record.question}\nSQL: {query_record.sql}\n\n")
 
             self.database_knowledge_backend.add(query_records)
+            return TokenUsage(
+                completion_tokens=usage["completion_tokens"],
+                prompt_tokens=usage["prompt_tokens"],
+                total_tokens=usage["total_tokens"],
+            )
         else:
             raise ValueError("ddl_sql and data_sql must be provided")
 
     @timing
-    def generate_database_summary(self, query_samples_size: int) -> None:
+    def _generate_database_summary(self, query_samples_size: int) -> TokenUsage:
         self.ddl_sql = (
             self.dialect.get_polished_schema(self.language)
             if not self.polished_schema
@@ -299,6 +329,12 @@ class DatabaseAgent(BaseAgent):
             encoding="utf-8",
         ) as f:
             f.write(self.recommendation_question)
+
+        return TokenUsage(
+            completion_tokens=response.info['usage']["completion_tokens"],
+            prompt_tokens=response.info['usage']["prompt_tokens"],
+            total_tokens=response.info['usage']["total_tokens"],
+        )
 
     def get_summary(self) -> str:
         return self.database_summary
@@ -331,7 +367,7 @@ class DatabaseAgent(BaseAgent):
         self,
         level: TrainLevel = TrainLevel.MEDIUM,
         reset_train: bool = False,
-    ) -> None:
+    ) -> TokenUsage:
         """Train knowledge"""
         data_samples_size = 20
         table_count = len(self.dialect.get_table_names())
@@ -365,15 +401,29 @@ class DatabaseAgent(BaseAgent):
             else:
                 logger.info(message)
 
+        token_usage: TokenUsage = TokenUsage()
+
         if self.database_knowledge_backend.get_table_collection_size() == 0:
-            self._parse_schema_to_knowledge(polish=self.polished_schema)
+            _token_usage: TokenUsage = self._parse_schema_to_knowledge(polish=self.polished_schema)
+            token_usage.add_token(_token_usage)
+
         if self.database_knowledge_backend.get_data_collection_size() == 0:
-            self._parse_sampled_data_to_knowledge(data_samples_size=data_samples_size)
+            _token_usage: TokenUsage = self._parse_sampled_data_to_knowledge(
+                data_samples_size=data_samples_size
+            )
+            token_usage.add_token(_token_usage)
+
         if self.database_knowledge_backend.get_query_collection_size() == 0:
-            self._parse_query_to_knowledge(query_samples_size)
+            _token_usage: TokenUsage = self._parse_query_to_knowledge(query_samples_size)
+            token_usage.add_token(_token_usage)
 
         if not self.database_summary or reset_train:
-            self.generate_database_summary(query_samples_size=query_samples_size)
+            _token_usage: TokenUsage = self._generate_database_summary(
+                query_samples_size=query_samples_size
+            )
+            token_usage.add_token(_token_usage)
+
+        return token_usage
 
     @timing
     def question_to_sql(self, question: str, dialect_name: str) -> QuestionMeta:
@@ -387,7 +437,7 @@ class DatabaseAgent(BaseAgent):
 
         data_records: List[DMLRecord] = self.database_knowledge_backend.query_data(question)
         prompt = prompt.replace(
-            "{{sample_data}}", "\n".join([record.sql for record in data_records])
+            "{{sample_data}}", "\n".join([record.dataset for record in data_records])
         )
 
         query_records: List[QueryRecord] = self.database_knowledge_backend.query_query(question)

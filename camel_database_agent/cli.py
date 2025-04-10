@@ -151,11 +151,13 @@ def main() -> None:
         language=args.language,
         data_path=data_path,
     )
-    database_agent.train_knowledge(
+    token_usage = database_agent.train_knowledge(
         level=TrainLevel.MEDIUM,
         reset_train=args.reset_train,
     )
 
+    print(f"{Fore.GREEN}")
+    print("=" * 50)
     print(f"{Fore.GREEN}Database Overview")
     print("=" * 50)
     print(f"{database_agent.get_summary()}")
@@ -173,6 +175,7 @@ def main() -> None:
         f"{Fore.CYAN}Type {Fore.LIGHTYELLOW_EX}'help'{Fore.RESET} "
         f"to get more recommended questions"
     )
+    print(f"{Fore.CYAN}Training completed, using {token_usage.total_tokens} tokens{Fore.RESET}")
     print(f"{Fore.CYAN}=" * 50)
 
     session_id = str(uuid.uuid4())
