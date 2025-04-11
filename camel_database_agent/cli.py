@@ -19,11 +19,11 @@ from colorama import Fore
 from tabulate import tabulate
 
 from camel_database_agent import DatabaseAgent
-from camel_database_agent.database.database_manager import DatabaseManager
+from camel_database_agent.database.manager import DatabaseManager
 from camel_database_agent.database_agent import DatabaseAgentResponse
 from camel_database_agent.database_base import TrainLevel, spinner
 
-"""设置日志"""
+"""Logging"""
 logging.basicConfig(
     level=logging.ERROR,
     format="%(message)s",
@@ -33,7 +33,7 @@ logging.basicConfig(
 logging.getLogger("camel_database_agent").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
-"""设置 pandas 显示选项"""
+"""Pandas display"""
 pd.set_option("display.max_rows", None)  # Show all rows
 pd.set_option("display.max_columns", None)  # Show all columns
 pd.set_option("display.width", None)  # Auto-detect display width

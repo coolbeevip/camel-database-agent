@@ -3,10 +3,10 @@ from typing import ClassVar, List, Optional, Union
 from camel.models import BaseModelBackend
 from sqlalchemy import DefaultClause
 
-from camel_database_agent.database.database_manager import DatabaseManager
-from camel_database_agent.database.dialect.database_schema_dialect import (
+from camel_database_agent.database.dialect.dialect import (
     DatabaseSchemaDialect,
 )
+from camel_database_agent.database.manager import DatabaseManager
 
 
 class DatabaseSchemaDialectSqlite(DatabaseSchemaDialect):

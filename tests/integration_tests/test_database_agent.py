@@ -7,7 +7,7 @@ from camel.types import ModelPlatformType, ModelType
 from dotenv import load_dotenv
 
 from camel_database_agent import DatabaseAgent
-from camel_database_agent.database.database_manager import DatabaseManager
+from camel_database_agent.database.manager import DatabaseManager
 from camel_database_agent.database_base import MessageLogToEmpty
 
 load_dotenv("../../.env")  # isort:skip

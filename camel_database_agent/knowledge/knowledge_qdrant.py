@@ -6,8 +6,8 @@ from camel.models import BaseModelBackend
 from camel.storages import QdrantStorage
 from qdrant_client.conversions.common_types import CollectionInfo
 
-from camel_database_agent.database.database_schema_parse import QueryRecord
-from camel_database_agent.knowledge.database_knowledge import DatabaseKnowledge
+from camel_database_agent.database.schema import QueryRecord
+from camel_database_agent.knowledge.knowledge import DatabaseKnowledge
 
 
 class DatabaseKnowledgeQdrant(DatabaseKnowledge):

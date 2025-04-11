@@ -1,11 +1,11 @@
 import textwrap
-from typing import List, Optional, TypeVar, Union
+from typing import Generic, List, Optional, TypeVar, Union
 
 from camel.agents import ChatAgent
 from camel.models import BaseModelBackend
 from pydantic import BaseModel
 
-from camel_database_agent.database.database_manager import DatabaseManager
+from camel_database_agent.database.manager import DatabaseManager
 from camel_database_agent.database_base import timing
 
 
@@ -27,12 +27,13 @@ class QueryRecord(BaseModel):
     sql: str
 
 
-RecordType = TypeVar("RecordType", DDLRecord, DMLRecord, QueryRecord)
+T = TypeVar('T', bound=BaseModel)
 
 
-class SchemaParseResponse(BaseModel):
-    data: List[RecordType]
+class SchemaParseResponse(BaseModel, Generic[T]):
+    data: List[T]
     usage: Optional[dict]
+    errors: Optional[List[T]] = None
 
 
 class DDLRecordResponseFormat(BaseModel):

@@ -6,8 +6,8 @@ from camel.agents import ChatAgent
 from camel.models import BaseModelBackend
 from tabulate import tabulate
 
-from camel_database_agent.database.database_manager import DatabaseManager
-from camel_database_agent.database_prompt import POLISH_SCHEMA_OUTPUT_EXAMPLE
+from camel_database_agent.database.manager import DatabaseManager
+from camel_database_agent.database.prompts import PromptTemplates
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class DatabaseSchemaDialect(abc.ABC):
 
     def get_polished_schema(self, language: str = "English") -> str:
         if self.schema_polish_agent:
-            prompt = POLISH_SCHEMA_OUTPUT_EXAMPLE.replace(
+            prompt = PromptTemplates.POLISH_SCHEMA_OUTPUT_EXAMPLE.replace(
                 "{{ddl_sql}}", self.get_schema()
             ).replace("{{language}}", language)
             response = self.schema_polish_agent.step(prompt)

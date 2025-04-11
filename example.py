@@ -11,7 +11,7 @@ from colorama import Fore
 from tabulate import tabulate
 
 from camel_database_agent import DatabaseAgent
-from camel_database_agent.database.database_manager import DatabaseManager
+from camel_database_agent.database.manager import DatabaseManager
 from camel_database_agent.database_base import TrainLevel
 
 # Configure logging settings to show errors on stdout

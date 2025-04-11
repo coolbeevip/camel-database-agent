@@ -5,8 +5,8 @@ from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
 from dotenv import load_dotenv
 
-from camel_database_agent.database.database_manager import DatabaseManager
-from camel_database_agent.database.database_schema_parse import (
+from camel_database_agent.database.manager import DatabaseManager
+from camel_database_agent.database.schema import (
     DatabaseSchemaParse,
     SchemaParseResponse,
 )

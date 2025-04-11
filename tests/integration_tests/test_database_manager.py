@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from dotenv import load_dotenv
 
-from camel_database_agent.database.database_manager import DatabaseManager, SQLExecutionError
+from camel_database_agent.database.manager import DatabaseManager, SQLExecutionError
 
 load_dotenv()  # isort:skip
 

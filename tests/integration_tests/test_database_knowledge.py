@@ -1,5 +1,4 @@
 import os
-from typing import List
 from unittest import TestCase
 
 from camel.embeddings import OpenAIEmbedding
@@ -8,13 +7,12 @@ from camel.types import ModelPlatformType, ModelType
 from dotenv import load_dotenv
 
 from camel_database_agent import DataQueryInferencePipeline
-from camel_database_agent.database.database_manager import DatabaseManager
-from camel_database_agent.database.database_schema_parse import (
+from camel_database_agent.database.manager import DatabaseManager
+from camel_database_agent.database.schema import (
     DatabaseSchemaParse,
-    DDLRecord,
 )
-from camel_database_agent.knowledge.database_knowledge import DatabaseKnowledge
-from camel_database_agent.knowledge.database_knowledge_qdrant import (
+from camel_database_agent.knowledge.knowledge import DatabaseKnowledge
+from camel_database_agent.knowledge.knowledge_qdrant import (
     DatabaseKnowledgeQdrant,
 )
 
@@ -42,8 +40,7 @@ class TestDatabaseKnowledge(TestCase):
     def test_qdrant_with_ddl(self) -> None:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         with open(os.path.join(current_dir, "ddl.sql"), "r") as f:
-            ddl_records: List[DDLRecord] = self.parse.parse_ddl_record(f.read())
-            self.knowledge.add(ddl_records)
+            self.knowledge.add(self.parse.parse_ddl_record(f.read()).data)
 
         ddl_records = self.knowledge.query_ddl("查询用户表中的所有用户信息", top_k=2)
         assert len(ddl_records) == 2
@@ -66,7 +63,6 @@ class TestDatabaseKnowledge(TestCase):
             ),
             database_manager=self.database_manager,
         )
-        query_records = pipeline.generate(10)
+        query_records = pipeline.generate(10).data
         self.knowledge.add(records=query_records)
-        query_records = self.knowledge.get_query_collection_sample(5)
-        assert len(query_records) == 5
+        assert len(self.knowledge.get_query_collection_sample(5)) == 5

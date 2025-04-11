@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import random
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, cast
 
 from camel.agents import BaseAgent, ChatAgent
 from camel.embeddings import BaseEmbedding, OpenAIEmbedding
@@ -12,16 +12,16 @@ from colorama import Fore
 from pydantic import BaseModel
 from tabulate import tabulate
 
-from camel_database_agent.database.database_manager import DatabaseManager
-from camel_database_agent.database.database_schema_parse import (
+from camel_database_agent.database.dialect.dialect import (
+    DatabaseSchemaDialect,
+)
+from camel_database_agent.database.manager import DatabaseManager
+from camel_database_agent.database.schema import (
     DatabaseSchemaParse,
     DDLRecord,
     DMLRecord,
     QueryRecord,
     SchemaParseResponse,
-)
-from camel_database_agent.database.dialect.database_schema_dialect import (
-    DatabaseSchemaDialect,
 )
 from camel_database_agent.database_base import (
     AssistantMessage,
@@ -39,11 +39,11 @@ from camel_database_agent.database_prompt import (
     DATABASE_SUMMARY_OUTPUT_EXAMPLE,
     QUESTION_CONVERT_SQL,
 )
-from camel_database_agent.datagen.sql_query_inference_pipeline import (
+from camel_database_agent.datagen.pipeline import (
     DataQueryInferencePipeline,
 )
-from camel_database_agent.knowledge.database_knowledge import DatabaseKnowledge, RecordType
-from camel_database_agent.knowledge.database_knowledge_qdrant import (
+from camel_database_agent.knowledge.knowledge import DatabaseKnowledge, RecordType
+from camel_database_agent.knowledge.knowledge_qdrant import (
     DatabaseKnowledgeQdrant,
 )
 
@@ -220,6 +220,8 @@ class DatabaseAgent(BaseAgent):
             )
 
         self.database_knowledge_backend.add(schema_parse_response.data)
+        if schema_parse_response.usage is None:
+            return TokenUsage(completion_tokens=0, prompt_tokens=0, total_tokens=0)
         return TokenUsage(
             completion_tokens=schema_parse_response.usage["completion_tokens"],
             prompt_tokens=schema_parse_response.usage["prompt_tokens"],
@@ -255,6 +257,8 @@ class DatabaseAgent(BaseAgent):
             )
 
         self.database_knowledge_backend.add(schema_parse_response.data)
+        if schema_parse_response.usage is None:
+            return TokenUsage(completion_tokens=0, prompt_tokens=0, total_tokens=0)
         return TokenUsage(
             completion_tokens=schema_parse_response.usage["completion_tokens"],
             prompt_tokens=schema_parse_response.usage["prompt_tokens"],
@@ -279,7 +283,7 @@ class DatabaseAgent(BaseAgent):
                     query_samples_size=query_samples_size
                 )
                 usage = schema_parse_response.usage
-                query_records.extend(schema_parse_response.data)
+                query_records.extend(cast(List[QueryRecord], schema_parse_response.data))
             with open(
                 os.path.join(self.knowledge_path, "question_sql.txt"),
                 "w",
@@ -289,6 +293,8 @@ class DatabaseAgent(BaseAgent):
                     f.write(f"QUESTION: {query_record.question}\nSQL: {query_record.sql}\n\n")
 
             self.database_knowledge_backend.add(query_records)
+            if usage is None:
+                return TokenUsage(completion_tokens=0, prompt_tokens=0, total_tokens=0)
             return TokenUsage(
                 completion_tokens=usage["completion_tokens"],
                 prompt_tokens=usage["prompt_tokens"],
@@ -404,24 +410,20 @@ class DatabaseAgent(BaseAgent):
         token_usage: TokenUsage = TokenUsage()
 
         if self.database_knowledge_backend.get_table_collection_size() == 0:
-            _token_usage: TokenUsage = self._parse_schema_to_knowledge(polish=self.polished_schema)
-            token_usage.add_token(_token_usage)
+            token_usage.add_token(self._parse_schema_to_knowledge(polish=self.polished_schema))
 
         if self.database_knowledge_backend.get_data_collection_size() == 0:
-            _token_usage: TokenUsage = self._parse_sampled_data_to_knowledge(
-                data_samples_size=data_samples_size
+            token_usage.add_token(
+                self._parse_sampled_data_to_knowledge(data_samples_size=data_samples_size)
             )
-            token_usage.add_token(_token_usage)
 
         if self.database_knowledge_backend.get_query_collection_size() == 0:
-            _token_usage: TokenUsage = self._parse_query_to_knowledge(query_samples_size)
-            token_usage.add_token(_token_usage)
+            token_usage.add_token(self._parse_query_to_knowledge(query_samples_size))
 
         if not self.database_summary or reset_train:
-            _token_usage: TokenUsage = self._generate_database_summary(
-                query_samples_size=query_samples_size
+            token_usage.add_token(
+                self._generate_database_summary(query_samples_size=query_samples_size)
             )
-            token_usage.add_token(_token_usage)
 
         return token_usage
 

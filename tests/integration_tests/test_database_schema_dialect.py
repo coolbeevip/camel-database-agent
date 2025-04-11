@@ -6,13 +6,13 @@ from camel.types import ModelPlatformType, ModelType
 from colorama import Fore
 from dotenv import load_dotenv
 
-from camel_database_agent.database.database_manager import DatabaseManager
-from camel_database_agent.database.dialect.database_schema_dialect import (
+from camel_database_agent.database.dialect.dialect import (
     DatabaseSchemaDialect,
 )
-from camel_database_agent.database.dialect.database_schema_dialect_sqlite import (
+from camel_database_agent.database.dialect.dialect_sqlite import (
     DatabaseSchemaDialectSqlite,
 )
+from camel_database_agent.database.manager import DatabaseManager
 
 load_dotenv("../../.env")  # isort:skip
 

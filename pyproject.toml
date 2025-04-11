@@ -83,6 +83,8 @@ known-first-party = ["camel_database_agent"]
 
 [tool.ruff.lint.per-file-ignores]
 "camel_database_agent/database_prompt.py" = ["E501"]
+"camel_database_agent/datagen/prompts.py" = ["E501"]
+"camel_database_agent/database/prompts.py" = ["E501"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

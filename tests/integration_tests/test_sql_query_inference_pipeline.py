@@ -6,7 +6,7 @@ from camel.types import ModelPlatformType, ModelType
 from dotenv import load_dotenv
 
 from camel_database_agent import DataQueryInferencePipeline
-from camel_database_agent.database.database_manager import DatabaseManager
+from camel_database_agent.database.manager import DatabaseManager
 
 load_dotenv("../../.env")  # isort:skip
 
@@ -36,5 +36,5 @@ class TestDataQueryInferencePipeline(TestCase):
         )
 
     def test_generate(self) -> None:
-        query_records = self.pipeline.generate(10)
-        assert len(query_records) == 10
+        schema_response = self.pipeline.generate(10)
+        assert len(schema_response.data) == 10
