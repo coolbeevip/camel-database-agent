@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![PyPi version](https://img.shields.io/pypi/v/camel-database-agent.svg)](https://pypi.org/project/camel-database-agent/)
 [![build](https://github.com/coolbeevip/camel-database-agent/actions/workflows/pr.yml/badge.svg)](https://github.com/coolbeevip/camel-database-agent/actions/workflows/pr.yml)
+[![](https://img.shields.io/pypi/dm/camel-database-agent)](https://pypi.org/project/camel-database-agent/)
 
 An open-source toolkit helping developers build natural language database query solutions based on [CAMEL-AI](https://github.com/camel-ai/camel).
 
