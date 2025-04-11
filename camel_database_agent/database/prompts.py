@@ -1,5 +1,9 @@
+import textwrap
+
+
 class PromptTemplates:
-    POLISH_SCHEMA_OUTPUT_EXAMPLE = """Please add detailed {{language}} comments to the following DDL script, explaining the business meaning and design intent of each table and field.
+    POLISH_SCHEMA_OUTPUT_EXAMPLE = textwrap.dedent("""
+    Please add detailed {{language}} comments to the following DDL script, explaining the business meaning and design intent of each table and field.
     
     Requirements:
     - Keep the original DDL script completely unchanged
@@ -32,4 +36,4 @@ class PromptTemplates:
     - Provide specific guidance for adding comments
     - Specify the expected format and content of comments
     - Emphasize professionalism and conciseness
-    """
+    """)

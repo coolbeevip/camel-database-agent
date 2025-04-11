@@ -35,10 +35,7 @@ from camel_database_agent.database_base import (
     strip_sql_code_block,
     timing,
 )
-from camel_database_agent.database_prompt import (
-    DATABASE_SUMMARY_OUTPUT_EXAMPLE,
-    QUESTION_CONVERT_SQL,
-)
+from camel_database_agent.database_prompt import PromptTemplates
 from camel_database_agent.datagen.pipeline import (
     DataQueryInferencePipeline,
 )
@@ -314,7 +311,7 @@ class DatabaseAgent(BaseAgent):
             self.database_knowledge_backend.get_query_collection_sample(query_samples_size)
         )
 
-        prompt = DATABASE_SUMMARY_OUTPUT_EXAMPLE
+        prompt = PromptTemplates.DATABASE_SUMMARY_OUTPUT_EXAMPLE
         prompt = prompt.replace("{{ddl_sql}}", self.ddl_sql)
         prompt = prompt.replace("{{language}}", self.language)
 
@@ -430,7 +427,7 @@ class DatabaseAgent(BaseAgent):
     @timing
     def question_to_sql(self, question: str, dialect_name: str) -> QuestionMeta:
         """Question to SQL"""
-        prompt = QUESTION_CONVERT_SQL.replace("{{dialect_name}}", dialect_name)
+        prompt = PromptTemplates.QUESTION_CONVERT_SQL.replace("{{dialect_name}}", dialect_name)
 
         ddl_records: List[DDLRecord] = self.database_knowledge_backend.query_ddl(question)
         prompt = prompt.replace(

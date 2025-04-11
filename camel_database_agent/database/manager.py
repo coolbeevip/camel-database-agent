@@ -28,9 +28,8 @@ def session_scope(session_maker: sessionmaker) -> Iterator[Session]:
     try:
         yield session
         session.commit()
-    except Exception as e:
+    except Exception:
         session.rollback()
-        logger.error(f"Database error: {e}")
         raise
     finally:
         session.close()
