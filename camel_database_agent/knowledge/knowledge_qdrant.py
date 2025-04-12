@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import List, Optional, Union
 
@@ -9,6 +10,8 @@ from qdrant_client.conversions.common_types import CollectionInfo
 from camel_database_agent.database.schema import QueryRecord
 from camel_database_agent.knowledge.knowledge import DatabaseKnowledge
 
+logger = logging.getLogger(__name__)
+
 
 class DatabaseKnowledgeQdrant(DatabaseKnowledge):
     def __init__(
@@ -18,24 +21,38 @@ class DatabaseKnowledgeQdrant(DatabaseKnowledge):
         path: Optional[str] = None,
     ):
         self.path = path
-        super().__init__(
-            embedding=embedding,
-            model=model,
-            table_storage=QdrantStorage(
+        try:
+            table_storage = QdrantStorage(
                 vector_dim=embedding.get_output_dim(),
                 collection_name="table_documents",
                 path=path if path else ":memory:",
-            ),
-            data_storage=QdrantStorage(
+            )
+            data_storage = QdrantStorage(
                 vector_dim=embedding.get_output_dim(),
                 collection_name="data_documents",
                 path=path if path else ":memory:",
-            ),
-            query_storage=QdrantStorage(
+            )
+            query_storage = QdrantStorage(
                 vector_dim=embedding.get_output_dim(),
                 collection_name="query_documents",
                 path=path if path else ":memory:",
-            ),
+            )
+        except ValueError as e:
+            logger.error(
+                "Adjust your embedding model to output vectors with "
+                "the same dimensions as the existing collection. "
+                "Alternatively, delete the existing collection and "
+                "recreate it with your current embedding dimensions "
+                "(note: this will result in the loss of all existing "
+                "data)."
+            )
+            raise e
+        super().__init__(
+            embedding=embedding,
+            model=model,
+            table_storage=table_storage,
+            data_storage=data_storage,
+            query_storage=query_storage,
         )
 
     def clear(self) -> None:
