@@ -63,7 +63,7 @@ class DatabaseSchemaParse:
 
     @timing
     def parse_ddl_record(self, text: str) -> SchemaParseResponse:
-        """Parsing DDL SQL statements"""
+        """Parsing DDL Schema"""
         prompt = (
             "Translate the following information into a JSON array format, "
             "with each JSON object in the array containing three "
@@ -98,7 +98,7 @@ class DatabaseSchemaParse:
 
     @timing
     def parse_dml_record(self, text: str) -> SchemaParseResponse:
-        """Parsing DML SQL statements"""
+        """Parsing Sampled Data"""
         prompt = (
             "Translate the following information into a JSON array format, "
             "with each JSON object in the array containing three "
