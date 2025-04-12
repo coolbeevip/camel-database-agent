@@ -120,7 +120,7 @@ def main() -> None:
     parser.add_argument(
         "--timeout",
         required=False,
-        default=180,
+        default=1800,
         help="The timeout value in seconds for API calls.",
     )
     args = parser.parse_args()
