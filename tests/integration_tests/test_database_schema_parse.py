@@ -37,7 +37,7 @@ class TestDatabaseSchemaParse(TestCase):
     def test_parse_dml_record(self) -> None:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         with open(os.path.join(current_dir, "data.sql"), "r") as f:
-            schema_parse_response: SchemaParseResponse = self.parse.parse_dml_record(f.read())
+            schema_parse_response: SchemaParseResponse = self.parse.parse_sampled_record(f.read())
             assert len(schema_parse_response.data) == 6
 
     def test_parse_query_record(self) -> None:

@@ -37,3 +37,34 @@ class PromptTemplates:
     - Specify the expected format and content of comments
     - Emphasize professionalism and conciseness
     """)
+
+    PARSE_SAMPLED_RECORD = textwrap.dedent("""
+    # JSON Format Request
+    You are a specialized JSON generator. Your only function is to parse the provided data and convert it to JSON format, strictly following the format requirements.
+    
+    ## Input Data:
+    {{section}}
+    
+    ## Instructions:
+    1. Create a JSON array with each table as an object
+    2. Each object must have exactly three fields:
+       - "id": the table name
+       - "summary": a brief description of the table
+       - "dataset": the data in markdown format
+    3. The entire response must be ONLY valid JSON without any additional text, explanation, or markdown code blocks
+    
+    ## Required Output Format:
+    {
+        "items":[{
+            "id": "<table name>",
+            "summary": "<table summary>",
+            "dataset": "<markdown dataset>"
+        }]
+    }
+    
+    ## IMPORTANT:
+    - Your response must contain ONLY the JSON object, nothing else
+    - Do not include explanations, introductions, or conclusions
+    - Do not use markdown code blocks (```) around the JSON
+    - Do not include phrases like "Here's the JSON" or "I've created the JSON"
+    - Do not indicate that you are providing the output in any way""")

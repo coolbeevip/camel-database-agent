@@ -55,6 +55,7 @@ class DataQueryInferencePipeline:
         prompt = prompt.replace("{{ddl_sql}}", self.ddl_sql)
         prompt = prompt.replace("{{data_sql}}", self.data_sql)
         prompt = prompt.replace("{{query_samples_size}}", str(query_samples_needed))
+        prompt = prompt.replace("{{dialect_name}}", self.database_manager.dialect_name())
         return prompt
 
     def _parse_response_content(self, content: str) -> List[QueryRecord]:
@@ -76,7 +77,7 @@ class DataQueryInferencePipeline:
             self.database_manager.select(query_record.sql)
             return True
         except SQLExecutionError as e:
-            logger.error(f"{Fore.RED}SQLExecutionError{Fore.RESET}: {e.sql} {e.error_message}")
+            logger.debug(f"{Fore.RED}SQLExecutionError{Fore.RESET}: {e.sql} {e.error_message}")
             return False
         except Exception as e:
             logger.error(

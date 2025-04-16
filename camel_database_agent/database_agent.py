@@ -236,7 +236,7 @@ class DatabaseAgent(BaseAgent):
         ) as f:
             f.write(self.data_sql)
 
-        schema_parse_response: SchemaParseResponse = self.schema_parse.parse_dml_record(
+        schema_parse_response: SchemaParseResponse = self.schema_parse.parse_sampled_record(
             self.data_sql
         )
 
