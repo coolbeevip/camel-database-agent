@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "camel-database-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "An integration package connecting Database and Camel"
 authors = [{ name = "Lei Zhang" }]
 requires-python = ">=3.10,<3.13"
